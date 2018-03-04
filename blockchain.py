@@ -28,9 +28,15 @@ class Blockchain:
         """
 
         parsed_url = urlparse(address)
+
+        print("\nparsed_url:", parsed_url)
+        print('address:', address)
+
         if parsed_url.netloc:
+            print('\nparsed_url.netloc:', parsed_url.netloc)
             self.nodes.add(parsed_url.netloc)
         elif parsed_url.path:
+            print("\nparsed_url.path:", parsed_url.path)
             # Accepts an URL without scheme like '192.168.0.5:5000'.
             self.nodes.add(parsed_url.path)
         else:
@@ -51,8 +57,6 @@ class Blockchain:
             block = chain[current_index]
             print(last_block)
             print(block)
-            # print(f'{last_block}')
-            # print(f'{block}')
             print("\n-----------\n")
             # Check that the hash of the block is correct
             if block['previous_hash'] != self.hash(last_block):
@@ -75,6 +79,10 @@ class Blockchain:
         """
 
         neighbours = self.nodes
+
+        print('\nneighbours:', neighbours)
+        print("type(neighbours):", type(neighbours))
+
         new_chain = None
 
         # We're only looking for chains longer than ours
@@ -82,11 +90,22 @@ class Blockchain:
 
         # Grab and verify the chains from all the nodes in our network
         for node in neighbours:
-            response = requests.get('http://', str(node), '/chain')
+            url = 'http://' + str(node) + '/chain'
+
+            # response = requests.get(url, Headers={"Content-Type":"application/json"})
+            headers = {"Content-Type":"application/json"}
+            body={}
+
+            response = requests.request('GET', url, json=body, headers=headers, verify=False)
+            print("\nnode:", node)
+            print("\nurl:", url)
+            print("\nresponse.text:", response.text)
+            print("\nresponse.status_code:", response.status_code)
 
             if response.status_code == 200:
-                length = response.json()['length']
-                chain = response.json()['chain']
+                responseBody = response.json()
+                length = responseBody['length']
+                chain = responseBody['chain']
 
                 # Check if the length is longer and the chain is valid
                 if length > max_length and self.valid_chain(chain):
@@ -181,10 +200,27 @@ class Blockchain:
         :param last_hash: <str> The hash of the Previous Block
         :return: <bool> True if correct, False if not.
         """
-
-        guess = (str(last_proof), str(proof), str(last_hash)).encode()
+        proofs = last_hash + str(last_proof) + str(proof)
+        guess = (proofs).encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 # Instantiate the Node
@@ -192,6 +228,8 @@ app = Flask(__name__)
 
 # Generate a globally unique address for this node
 node_identifier = str(uuid4()).replace('-', '')
+
+print('\nnode_identifier:', node_identifier)
 
 # Instantiate the Blockchain
 blockchain = Blockchain()
