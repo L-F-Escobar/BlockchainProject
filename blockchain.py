@@ -1,14 +1,10 @@
 import hashlib
 import json
 from time import time
-try:
-    from urllib.parse import urlparse
-except ImportError:
-     from urlparse import urlparse
+from urllib.parse import urlparse
 from uuid import uuid4
 
 import requests
-import flask
 from flask import Flask, jsonify, request
 
 
@@ -49,17 +45,16 @@ class Blockchain:
 
         while current_index < len(chain):
             block = chain[current_index]
-            print(last_block)
-            print(block)
-            # print(f'{last_block}')
-            # print(f'{block}')
+            print(f'{last_block}')
+            print(f'{block}')
             print("\n-----------\n")
             # Check that the hash of the block is correct
-            if block['previous_hash'] != self.hash(last_block):
+            last_block_hash = self.hash(last_block)
+            if block['previous_hash'] != last_block_hash:
                 return False
 
             # Check that the Proof of Work is correct
-            if not self.valid_proof(last_block['proof'], block['proof'], last_block['previous_hash']):
+            if not self.valid_proof(last_block['proof'], block['proof'], last_block_hash):
                 return False
 
             last_block = block
@@ -82,7 +77,7 @@ class Blockchain:
 
         # Grab and verify the chains from all the nodes in our network
         for node in neighbours:
-            response = requests.get('http://', str(node), '/chain')
+            response = requests.get(f'http://{node}/chain')
 
             if response.status_code == 200:
                 length = response.json()['length']
@@ -182,7 +177,7 @@ class Blockchain:
         :return: <bool> True if correct, False if not.
         """
 
-        guess = (str(last_proof), str(proof), str(last_hash)).encode()
+        guess = f'{last_proof}{proof}{last_hash}'.encode()
         guess_hash = hashlib.sha256(guess).hexdigest()
         return guess_hash[:4] == "0000"
 
@@ -237,7 +232,7 @@ def new_transaction():
     # Create a new Transaction
     index = blockchain.new_transaction(values['sender'], values['recipient'], values['amount'])
 
-    response = {'message': ('Transaction will be added to Block' + str(index))}
+    response = {'message': f'Transaction will be added to Block {index}'}
     return jsonify(response), 201
 
 
